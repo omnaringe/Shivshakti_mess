@@ -728,8 +728,8 @@ footer {
       <!-- FORM -->
       <div class="booking-card">
         <h3>🍱 Book Tiffin</h3>
-        <div class="fg"><label>Your Name *</label><input type="text" id="b-name" placeholder="e.g. Om Naringe"></div>
-        <div class="fg"><label>Phone Number *</label><input type="tel" id="b-phone" placeholder="9421251412"></div>
+        <div class="fg"><label>Your Name *</label><input type="text" id="b-name" placeholder="e.g. Rahul Sharma"></div>
+        <div class="fg"><label>Phone Number *</label><input type="tel" id="b-phone" placeholder="9876543210"></div>
         <div class="fg"><label>Delivery Address *</label><input type="text" id="b-address" placeholder="Your area / address"></div>
 
         <!-- TIME SLOT SELECTION -->
@@ -781,7 +781,7 @@ footer {
             <strong style="color:#F0C878;font-size:13px;">Cash on Delivery (COD) Note:</strong><br>
             A <strong style="color:#F5A05A;">₹15 booking fee</strong> must be paid in advance for COD orders.
             Bookings without this advance payment will be considered <em style="color:#E06060;">invalid</em> and will not be processed.
-            
+            Pay via UPI or hand it to the delivery person before your first tiffin.
           </p>
         </div>
         <div class="fg"><label>Special Note (optional)</label><textarea id="b-note" placeholder="Dietary preferences, allergies, instructions..."></textarea></div>
@@ -846,7 +846,7 @@ footer {
         </div>
         <div class="cash-box">
           <h4>💵 Cash on Delivery</h4>
-          <p>Pay cash at delivery time.</p>
+          <p>Pay cash at delivery time. No advance needed for cash customers.</p>
         </div>
         <div class="wa-box">
           <a href="https://wa.me/919421251412" target="_blank">
@@ -891,7 +891,7 @@ footer {
     <div style="max-width:560px;margin:0 auto 44px;background:#1C1710;border-radius:20px;padding:28px;border:1px solid rgba(232,101,10,0.2);text-align:left;">
       <h3 style="color:#F5A05A;font-size:16px;margin-bottom:16px;">✍️ Write a Review</h3>
       <div class="fg" style="margin-bottom:12px;"><label style="color:rgba(245,160,90,0.75);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px;">Your Name *</label>
-        <input type="text" id="r-name" placeholder="e.g.Om Naringe" style="width:100%;padding:10px 13px;border-radius:10px;border:1.5px solid rgba(232,101,10,0.25);font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;background:#251E16;color:#F0E8DC;">
+        <input type="text" id="r-name" placeholder="e.g. Rahul Sharma" style="width:100%;padding:10px 13px;border-radius:10px;border:1.5px solid rgba(232,101,10,0.25);font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;background:#251E16;color:#F0E8DC;">
       </div>
       <div class="fg" style="margin-bottom:12px;">
         <label style="color:rgba(245,160,90,0.75);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Rating *</label>
@@ -948,7 +948,7 @@ footer {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, orderBy, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   const firebaseConfig={apiKey:"AIzaSyAFDQ9hvvl5nswNLn-Sx8bsnTQMgTg-VBM",authDomain:"shivshakti-mess.firebaseapp.com",projectId:"shivshakti-mess",storageBucket:"shivshakti-mess.firebasestorage.app",messagingSenderId:"757166989337",appId:"1:757166989337:web:8bbb78dc96ead6fae2ca88"};
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -964,7 +964,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
   window._orderBy = orderBy;
   window._where = where;
   window._writeBatch = writeBatch;
-  window.dispatchEvent// ═════════════════════════
+  window._getDoc = getDoc;
+  window.dispatchEvent(new Event('firebaseReady'));
 </script>
 <script>
 // ══════════════════════════════════════
@@ -1080,16 +1081,48 @@ async function submitBooking(){
   if(!from||!to){ alert('Please select dates.'); return; }
   if(pay==='UPI' && !screenshotData){ alert('Please upload your payment screenshot for UPI booking.'); document.getElementById('ss-dropzone').style.borderColor='rgba(224,96,96,0.6)'; setTimeout(function(){ document.getElementById('ss-dropzone').style.borderColor='rgba(232,101,10,0.35)'; },2000); return; }
   var prices={'one-full':70,'one-half':50,'monthly-full':2500,'monthly-half':2100};
-  var book={id:Date.now(),name:name,phone:phone,address:address,slot:selectedSlot,meal:'Veg Thali',plan:plan,price:prices[plan]||0,from:from,to:to,pay:pay,note:note,time:new Date().toLocaleString('en-IN'),screenshot:screenshotData?'attached':'none'};
+  var book={id:Date.now(),name:name,phone:phone,address:address,slot:selectedSlot,meal:'Veg Thali',plan:plan,price:prices[plan]||0,from:from,to:to,pay:pay,note:note,time:new Date().toLocaleString('en-IN'),screenshot:screenshotData||'none'};
   var books=getBookings(); books.push(book); saveBookings(books);
+  // Store screenshot in localStorage separately (for local viewing)
+  if(screenshotData && screenshotData!=='none'){
+    try{ localStorage.setItem('ss_'+book.id, screenshotData); }catch(e){}
+  }
   toast('✅ Booking confirmed! Thank you, '+name+'!');
   ['b-name','b-phone','b-address','b-note'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
   var pd=document.getElementById('b-plan'); if(pd) pd.value='';
   var pdisp=document.getElementById('price-display'); if(pdisp) pdisp.style.display='none'; clearScreenshot();
   try{
     await waitForFirebase();
-    window._addDoc(window._col(window._db,'bookings'),book).catch(function(){});
-  }catch(e){}
+    if(!window._db){
+      toast('⚠️ Saved locally only — Firebase offline');
+      return;
+    }
+    // Save booking WITHOUT the base64 screenshot (keeps doc small, avoids 1MB limit)
+    var bookForFB = Object.assign({},book);
+    var ssData = bookForFB.screenshot;
+    bookForFB.screenshot = ssData && ssData!=='none' ? 'yes' : 'none';
+    var docRef = window._doc(window._db,'bookings',String(book.id));
+    try{
+      await window._setDoc(docRef, bookForFB);
+    }catch(e){
+      console.error('Booking Firebase save failed:', e);
+      toast('⚠️ Booking saved locally, but cloud sync failed: '+e.message);
+      return;
+    }
+    // Save screenshot separately if exists
+    if(ssData && ssData!=='none'){
+      try{
+        var ssRef = window._doc(window._db,'screenshots',String(book.id));
+        await window._setDoc(ssRef, {id:book.id, data:ssData, time:book.time});
+      }catch(e){
+        console.error('Screenshot Firebase save failed:', e);
+        toast('⚠️ Booking saved, but screenshot upload failed: '+e.message);
+      }
+    }
+  }catch(e){
+    console.error('Firebase save error:', e);
+    toast('⚠️ Cloud sync error: '+e.message);
+  }
 }
 
 function payWithUPI(app){
@@ -1174,6 +1207,264 @@ function formatDate(d){
 
 // ── NOTES ─────────────────────────────────────────────
 
+
+// ── FIREBASE DATA CACHE ────────────────────────────────────────
+// Cache all data in memory - load once, use everywhere
+var _fbCache = {
+  customers: null,
+  expenses:  null,
+  bookings:  null,
+  menu:      null,
+  reviews:   null,
+  notes:     null,
+  updates:   null
+};
+
+async function fbLoad(collection){
+  await waitForFirebase();
+  if(!window._getDocs || !window._db) return [];
+  try{
+    var snap = await window._getDocs(window._col(window._db, collection));
+    var items = [];
+    snap.forEach(function(d){ items.push(Object.assign({}, d.data(), {_fid: d.id})); });
+    _fbCache[collection] = items;
+    return items;
+  }catch(e){
+    console.warn('fbLoad '+collection+':', e.message);
+    return [];
+  }
+}
+
+async function fbSave(collection, id, data){
+  await waitForFirebase();
+  if(!window._setDoc || !window._db) throw new Error('Firebase not ready');
+  await window._setDoc(window._doc(window._db, collection, String(id)), data);
+  _fbCache[collection] = null; // invalidate cache
+}
+
+async function fbDelete(collection, id){
+  await waitForFirebase();
+  if(!window._deleteDoc || !window._db) throw new Error('Firebase not ready');
+  await window._deleteDoc(window._doc(window._db, collection, String(id)));
+  _fbCache[collection] = null; // invalidate cache
+}
+
+// ── ADMIN CUSTOMERS ──────────────────────────────────────────────────────────
+async function aLoadCustomers(){
+  var pg = document.getElementById('apage-customers');
+  if(!pg) return;
+  var q = (document.getElementById('a-csearch')||{}).value||'';
+  // Show loading
+  var tbody = pg.querySelector('table tbody') || pg;
+  // Load from Firebase (fast if cached)
+  var items = _fbCache.customers;
+  if(!items){
+    items = await fbLoad('customers');
+    if(!items.length) items = getCustomers(); // fallback localStorage
+    else saveCustomers(items); // sync
+  }
+  var all = items;
+  var custs = q ? all.filter(function(c){ return c.name.toLowerCase().includes(q.toLowerCase())||c.phone.includes(q); }) : all;
+  var th = 'style="padding:10px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);"';
+  var td = function(extra){ return 'style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;'+(extra||'')+'"'; };
+  pg.innerHTML = '<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">👥 Customers</h2>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
+    +aSC('Total',all.length)+aSC('Active',all.filter(function(c){return c.status==='Active';}).length,'#5DBF85')+aSC('Inactive',all.filter(function(c){return c.status!=='Active';}).length,'#E06060')
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:14px;">'
+    +'<input id="a-csearch" placeholder="🔍 Search..." oninput="aLoadCustomers()" value="'+q+'" style="padding:9px 13px;border-radius:10px;border:1px solid rgba(232,101,10,0.3);background:#1A0F08;color:#F0E8DC;font-size:13px;outline:none;width:180px;">'
+    +'<button onclick="aOpenCust()" style="padding:9px 16px;border-radius:10px;background:linear-gradient(135deg,#E8650A,#B84A00);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;">+ Add</button>'
+    +'</div>'
+    +(custs.length
+      ? '<div style="background:#1A0F08;border:1px solid rgba(232,101,10,0.15);border-radius:14px;overflow:auto;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;"><thead><tr>'
+        +'<th '+th+'>Name</th><th '+th+'>Phone</th><th '+th+'>Address</th>'
+        +'<th '+th+'>Amount</th><th '+th+'>Start</th><th '+th+'>End</th>'
+        +'<th '+th+'>Status</th><th '+th+'>Actions</th>'
+        +'</tr></thead><tbody>'
+        +custs.map(function(c){
+          return '<tr>'
+            +'<td '+td('font-weight:600;')+'>'+c.name+'</td>'
+            +'<td '+td()+'>'+c.phone+'</td>'
+            +'<td '+td('color:rgba(240,232,220,0.6);')+'>'+(c.address||'—')+'</td>'
+            +'<td '+td('font-weight:700;color:#F0C878;')+'>'+(c.amount?'₹'+c.amount:'—')+'</td>'
+            +'<td '+td('font-size:12px;')+'>'+(c.startDate||'—')+'</td>'
+            +'<td '+td('font-size:12px;')+'>'+(c.endDate||'—')+'</td>'
+            +'<td '+td()+'><span style="font-size:11px;padding:2px 7px;border-radius:5px;background:'+(c.status==='Active'?'rgba(42,122,74,0.2)':'rgba(184,50,50,0.2)')+';color:'+(c.status==='Active'?'#5DBF85':'#E06060')+';">'+c.status+'</span></td>'
+            +'<td '+td('display:flex;gap:5px;')+'>'
+            +'<button onclick="aEditCust(this.dataset.id)" data-id="'+(c._fid||c.id)+'" style="padding:4px 9px;border-radius:6px;background:rgba(232,101,10,0.15);color:#F5A05A;border:1px solid rgba(232,101,10,0.35);font-size:11px;cursor:pointer;">✏️</button>'
+            +'<button onclick="aDelCust(this.dataset.id)" data-id="'+(c._fid||c.id)+'" style="padding:4px 9px;border-radius:6px;background:rgba(192,57,43,0.18);color:#E06060;border:1px solid rgba(192,57,43,0.35);font-size:11px;cursor:pointer;">🗑️</button>'
+            +'</td></tr>';
+        }).join('')
+        +'</tbody></table></div>'
+      : '<div style="padding:24px;text-align:center;color:rgba(240,232,220,0.3);">No customers found</div>'
+    );
+}
+
+async function aSaveCust(){
+  var name=document.getElementById('a-cname').value.trim();
+  var phone=document.getElementById('a-cphone').value.trim();
+  if(!name||!phone){alert('Name and phone required');return;}
+  var eid=document.getElementById('a-ceid').value;
+  var id = eid ? Number(eid) : Date.now();
+  var cust={id:id,name:name,phone:phone,
+    address:document.getElementById('a-caddr').value,
+    status:document.getElementById('a-cstatus').value,
+    amount:document.getElementById('a-camount').value,
+    startDate:document.getElementById('a-cstart').value,
+    endDate:document.getElementById('a-cend').value};
+  try{
+    await fbSave('customers', id, cust);
+    var custs=getCustomers();
+    if(eid) custs=custs.map(function(c){return String(c.id)===String(eid)?cust:c;});
+    else custs.push(cust);
+    saveCustomers(custs);
+    toast(eid?'✅ Customer updated':'✅ Customer added');
+    aClose('a-mcust');
+    aLoadCustomers();
+  }catch(e){ toast('❌ Error: '+e.message); }
+}
+
+async function aDelCust(id){
+  if(!confirm('Delete this customer?')) return;
+  try{
+    await fbDelete('customers', id);
+    saveCustomers(getCustomers().filter(function(c){return String(c.id)!==String(id)&&String(c._fid)!==String(id);}));
+    toast('🗑️ Customer deleted');
+    aLoadCustomers();
+  }catch(e){ toast('❌ Error: '+e.message); }
+}
+
+// ── ADMIN EXPENSES ───────────────────────────────────────────────────────────
+async function aLoadExpenses(){
+  var pg=document.getElementById('apage-expenses');
+  if(!pg)return;
+  var items = _fbCache.expenses;
+  if(!items){
+    items = await fbLoad('expenses');
+    if(!items.length) items = getExpenses();
+    else saveExpenses(items);
+  }
+  var exps = items;
+  var inc=exps.filter(function(e){return e.type==='Income';}).reduce(function(s,e){return s+Number(e.amount);},0);
+  var exp=exps.filter(function(e){return e.type==='Expense';}).reduce(function(s,e){return s+Number(e.amount);},0);
+  var th='style="padding:10px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);"';
+  var td=function(extra){return 'style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;'+(extra||'')+'"';};
+  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">💰 Expenses</h2>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
+    +aSC('Income','₹'+inc,'#5DBF85')+aSC('Expense','₹'+exp,'#E06060')+aSC('Profit','₹'+(inc-exp),inc-exp>=0?'#5DBF85':'#E06060')
+    +'</div>'
+    +'<div style="margin-bottom:14px;"><button onclick="aOpenExp()" style="padding:9px 16px;border-radius:10px;background:linear-gradient(135deg,#E8650A,#B84A00);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;">+ Add Entry</button></div>'
+    +(exps.length
+      ? '<div style="background:#1A0F08;border:1px solid rgba(232,101,10,0.15);border-radius:14px;overflow:auto;">'
+        +'<table style="width:100%;border-collapse:collapse;min-width:450px;"><thead><tr>'
+        +'<th '+th+'>Type</th><th '+th+'>Description</th><th '+th+'>Amount</th><th '+th+'>Date</th><th '+th+'>Actions</th>'
+        +'</tr></thead><tbody>'
+        +exps.map(function(e){
+          return '<tr>'
+            +'<td '+td()+'><span style="font-size:11px;padding:2px 7px;border-radius:5px;background:'+(e.type==='Income'?'rgba(42,122,74,0.2)':'rgba(184,50,50,0.2)')+';color:'+(e.type==='Income'?'#5DBF85':'#E06060')+';">'+e.type+'</span></td>'
+            +'<td '+td()+'>'+e.desc+'</td>'
+            +'<td '+td('font-weight:700;color:'+(e.type==='Income'?'#5DBF85':'#E06060')+';')+'">₹'+e.amount+'</td>'
+            +'<td '+td('font-size:12px;color:rgba(240,232,220,0.5);')+'>'+(e.date||'—')+'</td>'
+            +'<td '+td('display:flex;gap:5px;')+'>'
+            +'<button onclick="aEditExp(this.dataset.id)" data-id="'+(e._fid||e.id)+'" style="padding:4px 9px;border-radius:6px;background:rgba(232,101,10,0.15);color:#F5A05A;border:1px solid rgba(232,101,10,0.35);font-size:11px;cursor:pointer;">✏️</button>'
+            +'<button onclick="aDelExp(this.dataset.id)" data-id="'+(e._fid||e.id)+'" style="padding:4px 9px;border-radius:6px;background:rgba(192,57,43,0.18);color:#E06060;border:1px solid rgba(192,57,43,0.35);font-size:11px;cursor:pointer;">🗑️</button>'
+            +'</td></tr>';
+        }).join('')
+        +'</tbody></table></div>'
+      : '<div style="padding:24px;text-align:center;color:rgba(240,232,220,0.3);">No entries yet</div>'
+    );
+}
+
+async function aSaveExp(){
+  var desc=document.getElementById('a-edesc').value.trim();
+  var amt=parseFloat(document.getElementById('a-eamt').value);
+  if(!desc||isNaN(amt)){alert('Description and amount required');return;}
+  var eid=document.getElementById('a-eeid').value;
+  var id=eid?Number(eid):Date.now();
+  var exp={id:id,type:document.getElementById('a-etype').value,desc:desc,amount:amt,date:document.getElementById('a-edate').value};
+  try{
+    await fbSave('expenses',id,exp);
+    var exps=getExpenses();
+    if(eid) exps=exps.map(function(e){return String(e.id)===String(eid)?exp:e;});
+    else exps.push(exp);
+    saveExpenses(exps);
+    toast(eid?'✅ Updated':'✅ Added');
+    aClose('a-mexp');
+    aLoadExpenses();
+  }catch(e){ toast('❌ Error: '+e.message); }
+}
+
+async function aDelExp(id){
+  if(!confirm('Delete?')) return;
+  try{
+    await fbDelete('expenses',id);
+    saveExpenses(getExpenses().filter(function(e){return String(e.id)!==String(id)&&String(e._fid)!==String(id);}));
+    toast('🗑️ Deleted');
+    aLoadExpenses();
+  }catch(e){ toast('❌ Error: '+e.message); }
+}
+
+// ── ADMIN BOOKINGS ───────────────────────────────────────────────────────────
+async function aLoadBookings(){
+  var pg=document.getElementById('apage-bookings');
+  if(!pg) return;
+  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">📋 Bookings</h2><div style="color:rgba(240,232,220,0.4);padding:20px;">⏳ Loading...</div>';
+  var books = _fbCache.bookings;
+  if(!books){
+    books = await fbLoad('bookings');
+    if(!books.length) books = getBookings();
+  }
+  var th='style="padding:10px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);"';
+  var td=function(extra){return 'style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;'+(extra||'')+'"';};
+  window._ssCache = window._ssCache || {};
+  books.forEach(function(b){
+    var bid = String(b._fid||b.id);
+    if(b.screenshot && b.screenshot.length > 100) window._ssCache[bid]=b.screenshot;
+  });
+  var ss=aSC('Total',books.length)+aSC('UPI',books.filter(function(b){return b.pay==='UPI';}).length,'#5DBF85')+aSC('Cash',books.filter(function(b){return b.pay==='Cash';}).length,'#F0C878');
+  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">📋 Bookings</h2>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">'+ss+'</div>'
+    +(books.length
+      ? '<div style="background:#1A0F08;border:1px solid rgba(232,101,10,0.15);border-radius:14px;overflow:auto;">'
+        +'<table style="width:100%;border-collapse:collapse;min-width:620px;"><thead><tr>'
+        +'<th '+th+'>#</th><th '+th+'>Name</th><th '+th+'>Phone</th><th '+th+'>Plan</th><th '+th+'>Pay</th><th '+th+'>Screenshot</th><th '+th+'>From</th><th '+th+'>Del</th>'
+        +'</tr></thead><tbody>'
+        +books.map(function(b,i){
+          var bid=String(b._fid||b.id);
+          var hasPhoto = b.screenshot && b.screenshot!=='none' && b.screenshot!=='attached';
+          var ssBtn = hasPhoto
+            ? '<button onclick="viewScreenshotById(this.dataset.id)" data-id="'+bid+'" style="padding:4px 10px;border-radius:6px;background:rgba(93,191,133,0.15);color:#5DBF85;border:1px solid rgba(93,191,133,0.35);font-size:11px;cursor:pointer;">📸 View</button>'
+            : '<span style="font-size:11px;color:rgba(240,232,220,0.25);">—</span>';
+          return '<tr>'
+            +'<td '+td('color:rgba(240,232,220,0.4);')+'>'+(i+1)+'</td>'
+            +'<td '+td('font-weight:600;')+'>'+b.name+'</td>'
+            +'<td '+td()+'>'+b.phone+'</td>'
+            +'<td '+td('font-size:12px;')+'>'+(b.plan||'—')+'</td>'
+            +'<td '+td()+'><span style="font-size:11px;padding:2px 7px;border-radius:5px;background:'+(b.pay==='UPI'?'rgba(42,122,74,0.2)':'rgba(212,168,67,0.2)')+';color:'+(b.pay==='UPI'?'#5DBF85':'#F0C878')+'">'+(b.pay||'—')+'</span></td>'
+            +'<td '+td()+'>'+ssBtn+'</td>'
+            +'<td '+td('font-size:12px;')+'>'+fmtDate(b.from)+'</td>'
+            +'<td '+td()+'><button onclick="aDelBook(this.dataset.id)" data-id="'+bid+'" style="padding:4px 9px;border-radius:6px;background:rgba(192,57,43,0.18);color:#E06060;border:1px solid rgba(192,57,43,0.35);font-size:11px;cursor:pointer;">🗑️</button></td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div>'
+      : '<div style="padding:30px;text-align:center;color:rgba(240,232,220,0.3);">No bookings yet</div>'
+    );
+}
+
+async function aDelBook(id){
+  if(!confirm('Delete this booking?')) return;
+  try{
+    await fbDelete('bookings', id);
+    fbDelete('screenshots', id).catch(function(){});
+    saveBookings(getBookings().filter(function(b){return String(b.id)!==String(id)&&String(b._fid)!==String(id);}));
+    if(window._ssCache) delete window._ssCache[id];
+    localStorage.removeItem('ss_'+id);
+    toast('🗑️ Booking deleted');
+    aLoadBookings();
+  }catch(e){ toast('❌ Error: '+e.message); }
+}
+
 window.onload=function(){
   var today=new Date().toISOString().split('T')[0];
   var e;
@@ -1205,7 +1496,7 @@ function openAdminPanel(){
         <button onclick="aTab('menu')"      id="atab-menu"      style="padding:7px 12px;border-radius:9px;background:transparent;color:#F0E8DC;border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;">🍽️ Menu</button>
         <button onclick="aTab('reviews')"   id="atab-reviews"   style="padding:7px 12px;border-radius:9px;background:transparent;color:#F0E8DC;border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;">⭐ Reviews</button>
         <button onclick="aTab('updates')"   id="atab-updates"   style="padding:7px 12px;border-radius:9px;background:transparent;color:#F0E8DC;border:1px solid rgba(255,255,255,0.1);font-size:12px;font-weight:700;cursor:pointer;">📢 Updates</button>
-        <button onclick="doLogout()" style="padding:7px 12px;border-radius:9px;background:rgba(192,57,43,0.2);color:#E06060;border:1px solid rgba(192,57,43,0.4);font-size:12px;font-weight:700;cursor:pointer;">🚪 Logout</button>
+        <button onclick="checkFirebaseStatus()" style="padding:7px 12px;border-radius:9px;background:rgba(93,191,133,0.15);color:#5DBF85;border:1px solid rgba(93,191,133,0.4);font-size:12px;font-weight:700;cursor:pointer;">🔧 Test Sync</button><button onclick="doLogout()" style="padding:7px 12px;border-radius:9px;background:rgba(192,57,43,0.2);color:#E06060;border:1px solid rgba(192,57,43,0.4);font-size:12px;font-weight:700;cursor:pointer;">🚪 Logout</button>
       </div>
     </div>
     <div id="admin-content" style="padding:20px;max-width:1100px;margin:0 auto;">
@@ -1296,42 +1587,7 @@ function aDash(){
     +'</div></div>';
 }
 
-function aLoadCustomers(){
-  var pg=document.getElementById('apage-customers');
-  if(!pg) return;
-  var q=(document.getElementById('a-csearch')||{}).value||'';
-  var all=getCustomers();
-  var custs=q?all.filter(function(c){return c.name.toLowerCase().includes(q.toLowerCase())||c.phone.includes(q);}):all;
-  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">👥 Customers</h2>'
-    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
-    +aSC('Total',all.length)+aSC('Active',all.filter(function(c){return c.status==="Active";}).length,'#5DBF85')+aSC('Inactive',all.filter(function(c){return c.status!=="Active";}).length,'#E06060')
-    +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:14px;"><input id="a-csearch" placeholder="🔍 Search..." oninput="aLoadCustomers()" value="'+q+'" style="padding:9px 13px;border-radius:10px;border:1px solid rgba(232,101,10,0.3);background:#1A0F08;color:#F0E8DC;font-size:13px;outline:none;width:180px;"><button onclick="aOpenCust()" style="padding:9px 16px;border-radius:10px;background:linear-gradient(135deg,#E8650A,#B84A00);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;">+ Add</button></div>'
-    +'<div style="background:#1A0F08;border:1px solid rgba(232,101,10,0.15);border-radius:14px;overflow:auto;">'
-    +(custs.length?'<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px;"><thead><tr>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Name</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Phone</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Address</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Amount</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Start</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">End</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Status</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Actions</th>'
-      +'</tr></thead><tbody>'
-      +custs.map(function(c){
-        return '<tr><td style="padding:11px 14px;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.04);">'+c.name+'</td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">'+c.phone+'</td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:rgba(240,232,220,0.6);font-size:12px;">'+(c.address||'—')+'</td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:600;color:#F0C878;">'+(c.amount?'₹'+c.amount:'—')+'</td>'+'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">'+(c.startDate||'—')+'</td>'+'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">'+(c.endDate||'—')+'</td>'
-      +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);" style="font-weight:600;color:#F0C878;">'+(c.amount?'₹'+c.amount:'—')+'</td>'
-      +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);" style="font-size:12px;">'+(c.startDate?c.startDate:'—')+'</td>'
-      +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);" style="font-size:12px;">'+(c.endDate?c.endDate:'—')+'</td>'
-      +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-size:11px;padding:2px 7px;border-radius:5px;background:'+(c.status==='Active'?'rgba(42,122,74,0.2)':'rgba(184,50,50,0.2)')+';color:'+(c.status==='Active'?'#5DBF85':'#E06060')+';">'+c.status+'</span></td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><button onclick="aEditCust('+c.id+')" style="padding:4px 9px;border-radius:6px;background:rgba(232,101,10,0.15);color:#F5A05A;border:1px solid rgba(232,101,10,0.35);font-size:11px;cursor:pointer;margin-right:4px;">✏️</button><button onclick="aDelCust('+c.id+')" style="padding:4px 9px;border-radius:6px;background:rgba(192,57,43,0.18);color:#E06060;border:1px solid rgba(192,57,43,0.35);font-size:11px;cursor:pointer;">🗑️</button></td></tr>';
-      }).join('')+'</tbody></table>'
-      :'<div style="padding:30px;text-align:center;color:rgba(240,232,220,0.3);">No customers</div>')
-    +'</div>';
-}
+
 function aOpenCust(){
   document.getElementById('a-mcust-title').textContent='Add Customer';
   ['a-ceid','a-cname','a-cphone','a-caddr','a-camount','a-cstart','a-cend'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
@@ -1351,99 +1607,13 @@ function aEditCust(id){
   var ce=document.getElementById('a-cend');if(ce)ce.value=c.endDate||'';
   aOpen('a-mcust');
 }
-function aSaveCust(){
-  var name=document.getElementById('a-cname').value.trim();
-  var phone=document.getElementById('a-cphone').value.trim();
-  if(!name||!phone){alert('Name and phone required');return;}
-  var amount=document.getElementById('a-camount').value;
-  var startDate=document.getElementById('a-cstart').value;
-  var endDate=document.getElementById('a-cend').value;
-  var custs=getCustomers(),eid=document.getElementById('a-ceid').value;
-  if(eid){custs=custs.map(function(c){return c.id==eid?Object.assign({},c,{name:name,phone:phone,address:document.getElementById('a-caddr').value,status:document.getElementById('a-cstatus').value,amount:amount,startDate:startDate,endDate:endDate}):c;});toast('✅ Updated');}
-  else{custs.push({id:Date.now(),name:name,phone:phone,address:document.getElementById('a-caddr').value,status:document.getElementById('a-cstatus').value,amount:amount,startDate:startDate,endDate:endDate});toast('✅ Added');}
-  saveCustomers(custs);aClose('a-mcust');aLoadCustomers();
-}
-function aDelCust(id){
-  if(!confirm('Delete?'))return;
-  saveCustomers(getCustomers().filter(function(c){return c.id!==id;}));
-  aLoadCustomers();toast('🗑️ Deleted');
-}
 
-async function aLoadBookings(){
-  var pg=document.getElementById('apage-bookings');
-  if(!pg)return;
-  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">📋 Bookings</h2><div style="color:rgba(240,232,220,0.4);padding:20px;">⏳ Loading...</div>';
-  var books=getBookings();
-  try{
-    await waitForFirebase();
-    if(window._getDocs&&window._db){
-      var snap=await window._getDocs(window._col(window._db,'bookings'));
-      var fb=[];snap.forEach(function(d){fb.push(Object.assign({},d.data(),{_fid:d.id}));});
-      if(fb.length)books=fb;
-    }
-  }catch(e){console.warn(e);}
-  var stats='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">'+aSC('Total',books.length)+aSC('UPI',books.filter(function(b){return b.pay==='UPI';}).length,'#5DBF85')+aSC('Cash',books.filter(function(b){return b.pay==='Cash';}).length,'#F0C878')+'</div>';
-  var tbl=books.length?('<div style="background:#1A0F08;border:1px solid rgba(232,101,10,0.15);border-radius:14px;overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;"><thead><tr>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">#</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Name</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Phone</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Plan</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Pay</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Screenshot</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">From</th>'
-    +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Del</th>'
-    +'</tr></thead><tbody>'
-    +books.map(function(b,i){
-      var fid=b._fid||b.id;
-      var ssBtn = b.screenshot && b.screenshot!=='none'
-        ? '<button onclick="viewScreenshot(this.dataset.src)" data-src="'+b.screenshot+'" style="padding:4px 10px;border-radius:6px;background:rgba(93,191,133,0.15);color:#5DBF85;border:1px solid rgba(93,191,133,0.35);font-size:11px;cursor:pointer;">📸 View</button>'
-        : '<span style="font-size:11px;color:rgba(240,232,220,0.25);">—</span>';
-      return '<tr><td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);color:rgba(240,232,220,0.4);">'+(i+1)+'</td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:600;">'+b.name+'</td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">'+b.phone+'</td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">'+(b.plan||'—')+'</td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-size:11px;padding:2px 7px;border-radius:5px;background:'+(b.pay==='UPI'?'rgba(42,122,74,0.2)':'rgba(212,168,67,0.2)')+';color:'+(b.pay==='UPI'?'#5DBF85':'#F0C878')+'">'+(b.pay||'—')+'</span></td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">'+ssBtn+'</td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;">'+fmtDate(b.from)+'</td>'
-        +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><button onclick="aDelBook(this.id)" id="'+fid+'" style="padding:4px 9px;border-radius:6px;background:rgba(192,57,43,0.18);color:#E06060;border:1px solid rgba(192,57,43,0.35);font-size:11px;cursor:pointer;">🗑️</button></td></tr>';
-    }).join('')+'</tbody></table></div>')
-    :'<div style="padding:30px;text-align:center;color:rgba(240,232,220,0.3);">No bookings yet</div>';
-  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">📋 Bookings</h2>'+stats+tbl;
-}
-async function aDelBook(id){
-  if(!confirm('Delete?'))return;
-  try{await waitForFirebase();if(window._deleteDoc&&window._doc&&window._db)await window._deleteDoc(window._doc(window._db,'bookings',String(id)));}catch(e){}
-  saveBookings(getBookings().filter(function(b){return String(b.id)!==String(id);}));
-  toast('🗑️ Deleted');aLoadBookings();
-}
 
-function aLoadExpenses(){
-  var pg=document.getElementById('apage-expenses');
-  if(!pg)return;
-  var exps=getExpenses();
-  var inc=exps.filter(function(e){return e.type==='Income';}).reduce(function(s,e){return s+Number(e.amount);},0);
-  var exp=exps.filter(function(e){return e.type==='Expense';}).reduce(function(s,e){return s+Number(e.amount);},0);
-  pg.innerHTML='<h2 style="font-size:22px;font-weight:800;color:#F5ECD8;margin-bottom:14px;">💰 Expenses</h2>'
-    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">'+aSC('Income','₹'+inc,'#5DBF85')+aSC('Expense','₹'+exp,'#E06060')+aSC('Profit','₹'+(inc-exp),inc-exp>=0?'#5DBF85':'#E06060')+'</div>'
-    +'<div style="margin-bottom:14px;"><button onclick="aOpenExp()" style="padding:9px 16px;border-radius:10px;background:linear-gradient(135deg,#E8650A,#B84A00);color:#fff;border:none;font-weight:700;cursor:pointer;font-size:13px;">+ Add Entry</button></div>'
-    +'<div style="background:#1A0F08;border:1px solid rgba(232,101,10,0.15);border-radius:14px;overflow:auto;">'
-    +(exps.length?'<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:450px;"><thead><tr>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Type</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Description</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Amount</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Date</th>'
-      +'<th style="padding:11px 14px;text-align:left;font-size:11px;color:#F0A85A;text-transform:uppercase;background:rgba(232,101,10,0.08);">Actions</th>'
-      +'</tr></thead><tbody>'
-      +exps.map(function(e){
-        return '<tr><td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-size:11px;padding:2px 7px;border-radius:5px;background:'+(e.type==='Income'?'rgba(42,122,74,0.2)':'rgba(184,50,50,0.2)')+';color:'+(e.type==='Income'?'#5DBF85':'#E06060')+';">'+e.type+'</span></td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);">'+e.desc+'</td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:700;color:'+(e.type==='Income'?'#5DBF85':'#E06060')+';">₹'+e.amount+'</td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:rgba(240,232,220,0.5);">'+fmtDate(e.date)+'</td>'
-          +'<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);"><button onclick="aEditExp('+e.id+')" style="padding:4px 9px;border-radius:6px;background:rgba(232,101,10,0.15);color:#F5A05A;border:1px solid rgba(232,101,10,0.35);font-size:11px;cursor:pointer;margin-right:4px;">✏️</button><button onclick="aDelExp('+e.id+')" style="padding:4px 9px;border-radius:6px;background:rgba(192,57,43,0.18);color:#E06060;border:1px solid rgba(192,57,43,0.35);font-size:11px;cursor:pointer;">🗑️</button></td></tr>';
-      }).join('')+'</tbody></table>'
-      :'<div style="padding:30px;text-align:center;color:rgba(240,232,220,0.3);">No entries yet</div>')
-    +'</div>';
-}
+
+
+
+
+
 function aOpenExp(){
   document.getElementById('a-mexp-title').textContent='Add Entry';
   ['a-eeid','a-edesc','a-eamt'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
@@ -1461,20 +1631,8 @@ function aEditExp(id){
   document.getElementById('a-edate').value=e.date||'';
   aOpen('a-mexp');
 }
-function aSaveExp(){
-  var desc=document.getElementById('a-edesc').value.trim();
-  var amt=parseFloat(document.getElementById('a-eamt').value);
-  if(!desc||isNaN(amt)){alert('Fill all fields');return;}
-  var exps=getExpenses(),eid=document.getElementById('a-eeid').value;
-  if(eid){exps=exps.map(function(e){return e.id==eid?Object.assign({},e,{type:document.getElementById('a-etype').value,desc:desc,amount:amt,date:document.getElementById('a-edate').value}):e;});toast('✅ Updated');}
-  else{exps.push({id:Date.now(),type:document.getElementById('a-etype').value,desc:desc,amount:amt,date:document.getElementById('a-edate').value});toast('✅ Added');}
-  saveExpenses(exps);aClose('a-mexp');aLoadExpenses();
-}
-function aDelExp(id){
-  if(!confirm('Delete?'))return;
-  saveExpenses(getExpenses().filter(function(e){return e.id!==id;}));
-  aLoadExpenses();toast('🗑️ Deleted');
-}
+
+
 
 async function aLoadMenu(){
   var pg=document.getElementById('apage-menu');
@@ -1654,27 +1812,40 @@ function clearScreenshot(){
 })();
 
 function viewScreenshot(src){
-  if(!src || src==='none' || src==='attached'){ toast('❌ No screenshot available'); return; }
-  var modal = document.createElement('div');
-  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  var inner = document.createElement('div');
-  inner.style.cssText='position:relative;max-width:min(90vw,600px);';
+  if(!src || src==='none' || src==='attached'){
+    toast('❌ No screenshot available');
+    return;
+  }
+  // Create fullscreen lightbox
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  
+  var box = document.createElement('div');
+  box.style.cssText = 'position:relative;max-width:min(92vw,580px);';
+  
   var img = document.createElement('img');
+  img.style.cssText = 'width:100%;max-height:82vh;border-radius:14px;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,0.85);display:block;';
   img.src = src;
-  img.style.cssText='width:100%;max-height:80vh;border-radius:14px;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,0.85);display:block;';
+  img.onerror = function(){
+    box.innerHTML = '<div style="color:#E06060;font-size:14px;padding:30px;text-align:center;">❌ Could not load screenshot</div>';
+  };
+  
   var closeBtn = document.createElement('button');
-  closeBtn.innerHTML='✕';
-  closeBtn.style.cssText='position:absolute;top:-12px;right:-12px;background:#E8650A;border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;font-weight:800;line-height:30px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);';
+  closeBtn.innerHTML = '✕';
+  closeBtn.style.cssText = 'position:absolute;top:-12px;right:-12px;background:#E8650A;border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;font-weight:800;line-height:30px;text-align:center;';
+  closeBtn.onclick = function(){ document.body.removeChild(overlay); };
+  
   var hint = document.createElement('div');
-  hint.style.cssText='text-align:center;margin-top:10px;font-size:12px;color:rgba(240,232,220,0.4);font-family:\'Plus Jakarta Sans\',sans-serif;';
-  hint.textContent='Click outside or ✕ to close';
-  closeBtn.onclick = function(){ modal.remove(); };
-  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
-  inner.appendChild(img);
-  inner.appendChild(closeBtn);
-  inner.appendChild(hint);
-  modal.appendChild(inner);
-  document.body.appendChild(modal);
+  hint.style.cssText = 'text-align:center;margin-top:10px;font-size:12px;color:rgba(240,232,220,0.4);';
+  hint.textContent = 'Click outside or ✕ to close';
+  
+  overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+  
+  box.appendChild(img);
+  box.appendChild(closeBtn);
+  box.appendChild(hint);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 
 
@@ -1796,6 +1967,77 @@ async function aDelUpdate(id){
 }
 
   window.aDelUpdate = aDelUpdate;
+
+async function viewScreenshotById(id){
+  // Check cache first
+  var cache = window._ssCache || {};
+  if(cache[id] && cache[id].length > 100){
+    viewScreenshot(cache[id]);
+    return;
+  }
+  // Check localStorage (for local/offline bookings)
+  try{
+    var lsKey = 'ss_'+id;
+    var lsData = localStorage.getItem(lsKey);
+    if(lsData && lsData.length > 100){
+      window._ssCache = window._ssCache || {};
+      window._ssCache[id] = lsData;
+      viewScreenshot(lsData);
+      return;
+    }
+  }catch(e){}
+  // Show loading
+  toast('⏳ Loading screenshot...');
+  try{
+    await waitForFirebase();
+    if(!window._db || !window._getDoc){
+      toast('❌ Firebase not ready');
+      return;
+    }
+    var ssRef = window._doc(window._db, 'screenshots', String(id));
+    var snap  = await window._getDoc(ssRef);
+    if(snap && snap.exists()){
+      var ssData = snap.data();
+      if(ssData && ssData.data && ssData.data.length > 100){
+        window._ssCache = window._ssCache || {};
+        window._ssCache[id] = ssData.data;
+        viewScreenshot(ssData.data);
+      } else {
+        toast('❌ Screenshot data is empty or corrupted');
+      }
+    } else {
+      toast('❌ Screenshot not found in database');
+    }
+  } catch(e){
+    console.error('viewScreenshotById error:', e);
+    toast('❌ Error: ' + e.message);
+  }
+}
+// ── DIAGNOSTICS (for debugging sync issues) ───────────────────────────────
+async function checkFirebaseStatus(){
+  await waitForFirebase();
+  var status = {
+    dbReady: !!window._db,
+    getDocsReady: !!window._getDocs,
+    setDocReady: !!window._setDoc,
+  };
+  console.log('Firebase status:', status);
+  if(!status.dbReady){
+    toast('❌ Firebase NOT connected - check internet/config');
+    return false;
+  }
+  try{
+    var testRef = window._doc(window._db,'_diagnostic','test');
+    await window._setDoc(testRef, {ts: Date.now()});
+    toast('✅ Firebase connected and writable!');
+    return true;
+  }catch(e){
+    console.error('Firebase write test failed:', e);
+    toast('❌ Firebase write failed: '+e.message+' (check Firestore rules)');
+    return false;
+  }
+}
+window.checkFirebaseStatus = checkFirebaseStatus;
 </script>
 </body>
 </html>
