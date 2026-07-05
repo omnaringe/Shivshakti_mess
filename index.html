@@ -772,7 +772,7 @@ footer {
           <div class="fg"><label>To Date *</label><input type="date" id="b-to"></div>
         </div>
         <div class="fg"><label>Payment Method</label>
-          <select id="b-pay" onchange="onPaymentChange()" style="transition:all 0.3s;"><option>UPI</option><option>Cash</option></select>
+          <select id="b-pay" onchange="onPaymentChange()" style="transition:all 0.3s;"><option value="">-- Select Payment --</option><option value="UPI">UPI</option><option value="Cash">Cash on Delivery</option></select>
         </div>
         <!-- COD Booking Note -->
         <div id="cod-note" style="display:none;background:linear-gradient(135deg,rgba(212,168,67,0.12),rgba(232,101,10,0.10));border:1.5px solid rgba(212,168,67,0.4);border-radius:14px;padding:13px 16px;margin-bottom:14px;gap:10px;align-items:flex-start;">
@@ -1079,6 +1079,7 @@ async function submitBooking(){
   if(!name||!phone||!address){ alert('Please fill Name, Phone and Address.'); return; }
   if(!plan){ alert('Please select a plan.'); return; }
   if(!from||!to){ alert('Please select dates.'); return; }
+  if(!pay){ alert('Please select a payment method (UPI or Cash).'); return; }
   if(pay==='UPI' && !screenshotData){ alert('Please upload your payment screenshot for UPI booking.'); document.getElementById('ss-dropzone').style.borderColor='rgba(224,96,96,0.6)'; setTimeout(function(){ document.getElementById('ss-dropzone').style.borderColor='rgba(232,101,10,0.35)'; },2000); return; }
   var prices={'one-full':70,'one-half':50,'monthly-full':2500,'monthly-half':2100};
   var book={id:Date.now(),name:name,phone:phone,address:address,slot:selectedSlot,meal:'Veg Thali',plan:plan,price:prices[plan]||0,from:from,to:to,pay:pay,note:note,time:new Date().toLocaleString('en-IN'),screenshot:screenshotData||'none'};
@@ -1590,21 +1591,28 @@ function aDash(){
 
 function aOpenCust(){
   document.getElementById('a-mcust-title').textContent='Add Customer';
-  ['a-ceid','a-cname','a-cphone','a-caddr','a-camount','a-cstart','a-cend'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  var s=document.getElementById('a-cstatus');if(s)s.value='Active';
+  ['a-ceid','a-cname','a-cphone','a-caddr','a-camount','a-cstart','a-cend'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.value='';
+  });
+  var s=document.getElementById('a-cstatus'); if(s) s.value='Active';
   aOpen('a-mcust');
 }
 function aEditCust(id){
-  var c=getCustomers().find(function(x){return x.id===id;});if(!c)return;
+  // Search by id OR _fid (handles both number and string IDs)
+  var all = _fbCache.customers || getCustomers();
+  var c = all.find(function(x){
+    return String(x.id)===String(id) || String(x._fid)===String(id);
+  });
+  if(!c){ toast('❌ Customer not found'); return; }
   document.getElementById('a-mcust-title').textContent='Edit Customer';
-  document.getElementById('a-ceid').value=id;
-  document.getElementById('a-cname').value=c.name;
-  document.getElementById('a-cphone').value=c.phone;
-  document.getElementById('a-caddr').value=c.address||'';
-  document.getElementById('a-cstatus').value=c.status||'Active';
-  var am=document.getElementById('a-camount');if(am)am.value=c.amount||'';
-  var cs=document.getElementById('a-cstart');if(cs)cs.value=c.startDate||'';
-  var ce=document.getElementById('a-cend');if(ce)ce.value=c.endDate||'';
+  document.getElementById('a-ceid').value = c.id || id;
+  document.getElementById('a-cname').value = c.name || '';
+  document.getElementById('a-cphone').value = c.phone || '';
+  document.getElementById('a-caddr').value = c.address || '';
+  document.getElementById('a-cstatus').value = c.status || 'Active';
+  var am=document.getElementById('a-camount'); if(am) am.value = c.amount||'';
+  var cs=document.getElementById('a-cstart');  if(cs) cs.value = c.startDate||'';
+  var ce=document.getElementById('a-cend');    if(ce) ce.value = c.endDate||'';
   aOpen('a-mcust');
 }
 
@@ -1760,18 +1768,26 @@ function doLogin(){ doAdminLogin(); }
 
 // ── PAYMENT CHANGE (COD note + screenshot) ────────────────────
 function onPaymentChange(){
-  var pay=document.getElementById('b-pay').value;
-  var cod=document.getElementById('cod-note');
-  var ssReq=document.getElementById('ss-required-label');
-  var ssCashNote=document.getElementById('ss-cash-note');
-  if(pay==='Cash'){
-    if(cod){ cod.style.display='flex'; }
-    if(ssReq){ ssReq.style.display='none'; }
-    if(ssCashNote){ ssCashNote.style.display='inline'; }
+  var pay = document.getElementById('b-pay').value;
+  var cod = document.getElementById('cod-note');
+  var ssReq = document.getElementById('ss-required-label');
+  var ssCashNote = document.getElementById('ss-cash-note');
+  var ssSection = document.getElementById('screenshot-section');
+  if(pay === 'Cash'){
+    if(cod) cod.style.display = 'flex';
+    if(ssReq) ssReq.style.display = 'none';
+    if(ssCashNote) ssCashNote.style.display = 'inline';
+    if(ssSection) ssSection.style.opacity = '0.5';
+  } else if(pay === 'UPI'){
+    if(cod) cod.style.display = 'none';
+    if(ssReq) ssReq.style.display = 'inline';
+    if(ssCashNote) ssCashNote.style.display = 'none';
+    if(ssSection) ssSection.style.opacity = '1';
   } else {
-    if(cod){ cod.style.display='none'; }
-    if(ssReq){ ssReq.style.display='inline'; }
-    if(ssCashNote){ ssCashNote.style.display='none'; }
+    // No payment selected
+    if(cod) cod.style.display = 'none';
+    if(ssReq) ssReq.style.display = 'none';
+    if(ssSection) ssSection.style.opacity = '0.5';
   }
 }
 
